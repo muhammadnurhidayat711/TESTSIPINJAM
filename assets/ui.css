@@ -1,0 +1,81 @@
+/* ===========================================
+   SIPINJAM UI (Reusable)
+   =========================================== */
+:root{
+  --ok:#22c55e; --ok-soft:#e9f8ef; --ok-ink:#065f46;
+  --pending:#f59e0b; --pending-soft:#fff7e6; --pending-ink:#9a3412;
+  --danger:#ef4444; --warning:#f59e0b; --primary:#2563eb; --success:#16a34a; --secondary:#64748b;
+  --ring:#2563eb; --txt:#1f2937; --muted:#6b7280; --bg:#f6f8fb; --card:#fff;
+  --shadow:0 6px 16px rgba(0,0,0,.06); --radius:10px;
+}
+
+/* Cards */
+.card{ background:var(--card); border-radius:var(--radius); box-shadow:var(--shadow); }
+.card-header{ padding:14px 18px; border-bottom:1px solid #e5e7eb; }
+.card-title{ margin:0; font-weight:700; color:var(--txt); }
+.card-body{ padding:18px; }
+
+/* Buttons */
+.btn{
+  display:inline-flex; align-items:center; gap:8px;
+  padding:9px 14px; border-radius:999px; border:1px solid transparent;
+  font-weight:600; font-size:.92rem; text-decoration:none; cursor:pointer;
+  transition:.18s ease-in-out;
+}
+.btn:hover{ transform:translateY(-1px); }
+.btn:active{ transform:translateY(0); }
+
+/* sizes */
+.btn--xs{ padding:6px 10px; font-size:.82rem; }
+.btn--sm{ padding:8px 12px; font-size:.88rem; }
+
+/* variants */
+.btn--primary{ background:var(--primary); color:#fff; }
+.btn--primary:hover{ filter:brightness(.95); }
+.btn--success{ background:var(--success); color:#fff; }
+.btn--success:hover{ filter:brightness(.95); }
+.btn--warning{ background:var(--warning); color:#111827; }
+.btn--warning:hover{ filter:brightness(.95); }
+.btn--danger{ background:var(--danger); color:#fff; }
+.btn--danger:hover{ filter:brightness(.95); }
+.btn--secondary{ background:#e5e7eb; color:#111827; }
+.btn--secondary:hover{ filter:brightness(.97); }
+
+/* Table Modern */
+.table-modern{ width:100%; border-collapse:separate; border-spacing:0 10px; }
+.table-modern thead th{
+  font-weight:700; color:var(--muted); font-size:.85rem;
+  text-transform:uppercase; letter-spacing:.04em;
+  padding:10px 12px; text-align:center; vertical-align:middle;
+}
+.table-modern tbody td{ padding:14px 16px; vertical-align:middle; color:var(--txt); text-align:center; }
+.table-modern tbody tr{ background:var(--card); box-shadow:var(--shadow); }
+.row-approve{ background:var(--ok-soft)!important; }
+.row-menunggu{ background:var(--pending-soft)!important; }
+
+.ui-actions{ display:flex; gap:6px; justify-content:center; flex-wrap:nowrap; }
+.ui-chips{ display:flex; flex-wrap:wrap; gap:6px; justify-content:center; }
+.ui-chip{
+  display:inline-flex; align-items:center; gap:6px; font-size:.82rem;
+  padding:6px 10px; border-radius:999px; background:#f1f5f9; color:#334155; border:1px solid #e2e8f0;
+}
+.ui-chip .qty{ font-weight:700; opacity:.9; }
+
+.ui-jadwal{ display:inline-flex; flex-direction:column; align-items:center; gap:4px; font-size:.9rem; font-weight:500; color:var(--txt);}
+.ui-jadwal .line{ display:flex; align-items:center; gap:10px; white-space:nowrap; }
+.ui-jadwal .arrow{ color:#6b7280; font-weight:bold; }
+
+/* Badges */
+.ui-badge{
+  display:inline-block; padding:6px 12px; border-radius:999px; font-weight:700; font-size:.82rem; border:1px solid transparent;
+}
+.ui-badge--ok{ background:#d1fae5; color:var(--ok-ink); border-color:#a7f3d0; }
+.ui-badge--pending{ background:#ffedd5; color:var(--pending-ink); border-color:#fed7aa; }
+
+/* Utilities */
+.text-center{text-align:center}
+.hide-sm{ display:table-cell; }
+@media (max-width: 768px){
+  .hide-sm{ display:none; }
+}
+.subtext{ color:var(--muted); font-size:.85rem; }

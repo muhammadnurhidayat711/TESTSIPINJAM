@@ -1,0 +1,71 @@
+/* ===== Custom Sidebar Modern Glass Style ===== */
+.sidebar {
+  background: rgba(102, 126, 234, 0.9) !important; /* warna dasar biru-ungu transparan */
+  backdrop-filter: blur(12px); /* efek kaca (glassmorphism) */
+  box-shadow: 2px 0 12px rgba(0, 0, 0, 0.2);
+  border-right: 1px solid rgba(255, 255, 255, 0.15);
+  transition: all 0.3s ease-in-out;
+}
+
+.sidebar .sidebar-content {
+  padding-top: 20px;
+}
+
+.sidebar .nav > li > a {
+  color: #f5f7ff !important;
+  font-weight: 500;
+  font-size: 14px;
+  border-radius: 8px;
+  margin: 4px 10px;
+  padding: 10px 14px;
+  transition: all 0.2s ease-in-out;
+}
+
+.sidebar .nav > li > a i {
+  margin-right: 10px;
+  font-size: 16px;
+  opacity: 0.9;
+}
+
+.sidebar .nav > li > a:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff !important;
+  transform: translateX(4px);
+}
+
+.sidebar .nav > li.active > a {
+  background: linear-gradient(90deg, #667eea, #764ba2);
+  color: #fff !important;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Warna teks untuk judul section di sidebar */
+.sidebar .nav-section h4.text-section {
+  color: #d1d9ff;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Mode gelap otomatis */
+body[data-theme="dark"] .sidebar {
+  background: rgba(15, 23, 42, 0.85) !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+body[data-theme="dark"] .sidebar .nav > li > a {
+  color: #cbd5e1 !important;
+}
+
+body[data-theme="dark"] .sidebar .nav > li > a:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff !important;
+}
+
+/* Responsif: sidebar otomatis melebar saat hover */
+@media (max-width: 768px) {
+  .sidebar {
+    width: 240px !important;
+  }
+}

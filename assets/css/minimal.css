@@ -1,0 +1,49 @@
+:root{
+  --bg:#ffffff;
+  --fg:#0f172a;
+  --muted:#64748b;
+  --accent:#2563eb;
+  --accent-2:#0ea5e9;
+  --border:#e2e8f0;
+  --round:16px;
+  --shadow:0 8px 24px rgba(0,0,0,.06);
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, 'Inter', 'Nunito Sans', Arial, sans-serif;
+  line-height:1.5;
+  color:var(--fg);
+  background:var(--bg);
+}
+.container{max-width:1080px;margin:0 auto;padding:24px}
+.navbar{
+  position:sticky; top:0; z-index:100;
+  display:flex; align-items:center; gap:16px;
+  padding:12px 20px; background:rgba(255,255,255,.8); backdrop-filter:saturate(150%) blur(8px);
+  border-bottom:1px solid var(--border);
+}
+.navbar a{color:var(--fg); text-decoration:none; padding:8px 12px; border-radius:12px}
+.navbar a.active, .btn-primary{background:var(--accent); color:white; box-shadow:var(--shadow)}
+.card{
+  background:#fff; border:1px solid var(--border); border-radius:var(--round); box-shadow:var(--shadow);
+  padding:20px;
+}
+.grid{display:grid; gap:16px}
+.grid.cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.grid.cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+@media (max-width:900px){ .grid.cols-2,.grid.cols-3{grid-template-columns:1fr} }
+.table{width:100%; border-collapse:separate; border-spacing:0; font-size:14px}
+.table th,.table td{padding:12px 14px; text-align:left; border-bottom:1px solid var(--border)}
+.table th{font-weight:600; color:var(--muted)}
+.table tr:hover{background:#f8fafc}
+.input, select, textarea{
+  width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:12px; outline:none;
+}
+.input:focus, select:focus, textarea:focus{border-color:var(--accent); box-shadow:0 0 0 3px rgba(37,99,235,.15)}
+.btn{display:inline-flex; align-items:center; gap:8px; padding:10px 14px; border:1px solid var(--border); border-radius:12px; cursor:pointer; background:#fff}
+.btn:hover{box-shadow:var(--shadow)}
+.badge{display:inline-block; padding:4px 10px; border-radius:999px; background:#f1f5f9; color:#334155; font-size:12px}
+.footer{margin-top:40px; padding:24px; color:var(--muted); border-top:1px solid var(--border)}
+.alert{padding:12px 14px; border:1px solid var(--border); border-radius:12px; background:#f8fafc}
