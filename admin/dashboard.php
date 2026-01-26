@@ -1644,12 +1644,4 @@ document.addEventListener('keydown', (e) => {
 
 renderMiniCalendar();
 
-  if ("serviceWorker" in navigator) {
-    navigator.serviceWorker
-      .register("/testsipinjam/firebase-messaging-sw.js")
-      .then(() => {
-        initFCM();
-      });
-  }
-
 </script>

@@ -29,7 +29,7 @@ include 'cek.php';
 
   <style>
     /* ===== SCOPED CSS - Tidak mengganggu konten halaman ===== */
-    
+
     /* Reset hanya untuk sidebar & header */
     .modern-sidebar *,
     .top-header * {
@@ -419,7 +419,6 @@ include 'cek.php';
       margin: 0 auto;
     }
 
-    /* Jangan override styling konten yang sudah ada */
     .page-inner .card {
       border-radius: 12px;
       box-shadow: 0 2px 15px rgba(0,0,0,0.08);
@@ -431,7 +430,6 @@ include 'cek.php';
       box-shadow: 0 4px 20px rgba(0,0,0,0.1);
     }
 
-    /* Dark mode untuk card - lebih subtle */
     body[data-theme="dark"] .page-inner .card {
       background: #1e293b;
       color: #e5e7eb;
@@ -571,7 +569,6 @@ include 'cek.php';
       color: #e5e7eb;
     }
 
-    /* Preserve light text on dark backgrounds in content */
     body[data-theme="dark"] .page-inner h1,
     body[data-theme="dark"] .page-inner h2,
     body[data-theme="dark"] .page-inner h3,
@@ -587,8 +584,6 @@ include 'cek.php';
       color: #cbd5e1;
     }
 
-    /* ===== UTILITY CLASSES ===== */
-    /* Hanya untuk card di dalam page-inner */
     .page-inner > .row > [class*="col"] > .card {
       border-radius: 12px;
       box-shadow: 0 2px 15px rgba(0,0,0,0.08);
@@ -602,17 +597,14 @@ include 'cek.php';
       box-shadow: 0 4px 20px rgba(0,0,0,0.1);
     }
 
-    /* Jangan ganggu table styling */
     .page-inner .table {
       margin-bottom: 0;
     }
 
-    /* Preserve button styles */
     .page-inner .btn {
       border-radius: 6px;
     }
 
-    /* DataTable wrapper */
     .page-inner .dataTables_wrapper {
       padding: 0;
     }
@@ -689,7 +681,7 @@ include 'cek.php';
           </span>
           <i class="fas fa-toggle-off" id="themeIcon"></i>
         </div>
-        
+
         <a href="../logout.php" class="logout-btn" onclick="return confirmLogout()">
           <i class="fas fa-sign-out-alt"></i>
           <span>Logout</span>
@@ -789,7 +781,7 @@ include 'cek.php';
     </div>
   </div>
 
-  <!-- Core JS -->
+  <!-- Core JS Files -->
   <script src="../assets/js/core/jquery.3.2.1.min.js"></script>
   <script src="../assets/js/core/popper.min.js"></script>
   <script src="../assets/js/core/bootstrap.min.js"></script>
@@ -853,7 +845,7 @@ include 'cek.php';
     (function(){
       const KEY = 'sipinjam_theme';
       const themeIcon = document.getElementById('themeIcon');
-      
+
       function applyTheme(theme){
         if(theme==='dark'){
           document.body.setAttribute('data-theme','dark');
@@ -867,10 +859,10 @@ include 'cek.php';
           }
         }
       }
-      
+
       const saved = localStorage.getItem(KEY) || 'light';
       applyTheme(saved);
-      
+
       window.toggleTheme = function(){
         const next = document.body.hasAttribute('data-theme') ? 'light' : 'dark';
         localStorage.setItem(KEY, next);
@@ -878,5 +870,56 @@ include 'cek.php';
       };
     })();
   </script>
+
+  <!-- ✅ FIREBASE SDK -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-messaging.js"></script>
+
+  <!-- ✅ FIREBASE.JS (yang sudah diperbaiki dengan logging detail) -->
+  <script src="../assets/js/firebase.js"></script>
+
+  <!-- ✅ INITIALIZE FCM UNTUK USER dengan setTimeout dan logging lengkap -->
+  <script>
+    // ✅ Tunggu 2 detik agar jQuery error tidak mengganggu FCM
+    setTimeout(function() {
+      const userId = <?php echo isset($_SESSION['id']) ? json_encode($_SESSION['id']) : 'null'; ?>;
+      const username = <?php echo isset($_SESSION['username']) ? json_encode($_SESSION['username']) : 'null'; ?>;
+
+      console.log('═══════════════════════════════════');
+      console.log('🚀 STARTING FCM INITIALIZATION');
+      console.log('═══════════════════════════════════');
+      console.log('👤 User Info:', { id: userId, username: username });
+
+      if (userId) {
+        // Reset flag jika sebelumnya gagal
+        if (window.fcmInitialized && !window.fcmToken) {
+          console.log('🔄 Resetting FCM flag (previous init incomplete)...');
+          window.fcmInitialized = false;
+        }
+
+        console.log('✅ Calling initFCM...');
+
+        if (typeof initFCM === 'function') {
+          initFCM(userId)
+            .then(() => {
+              console.log('═══════════════════════════════════');
+              console.log('✅✅ FCM READY FOR USER!');
+              console.log('═══════════════════════════════════');
+            })
+            .catch(err => {
+              console.log('═══════════════════════════════════');
+              console.error('❌❌ FCM INITIALIZATION FAILED');
+              console.log('═══════════════════════════════════');
+              console.error('Error:', err);
+            });
+        } else {
+          console.error('❌ initFCM function not found. Check if firebase.js loaded correctly.');
+        }
+      } else {
+        console.error('❌ User not logged in (userId is null)');
+      }
+    }, 2000); // ✅ Delay 2 detik untuk bypass jQuery errors
+  </script>
+
 </body>
 </html>

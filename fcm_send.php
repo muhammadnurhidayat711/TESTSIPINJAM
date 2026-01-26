@@ -3,17 +3,9 @@
 // session_start();
 // include "koneksi.php";
 
-if (empty($_SESSION['id'])) {
-    header("Location: ../index.php");
-    exit;
+if (session_status() === PHP_SESSION_NONE) {
+  session_start();
 }
-
-
-// ✅ Gunakan FCM V1 Helper
-require_once __DIR__ . '/../../../fcm_helper.php';
-
-
-
 
 // Pastikan user login
 if (empty($_SESSION['id'])) {
@@ -21,68 +13,16 @@ if (empty($_SESSION['id'])) {
   exit;
 }
 
-
 // ===============================
-// ✅ FUNCTION FCM NOTIFICATION - UPDATED WITH LOGGING
+// ✅ INCLUDE FCM FUNCTION YANG SUDAH ADA
 // ===============================
-function sendFCMNotification($token, $title, $body, $data = []) {
-    $url = 'https://fcm.googleapis.com/fcm/send';
-
-    // ⚠️ GANTI dengan Server Key dari Firebase Console
-    $serverKey = 'AIzaSyANIEfoeLfRNU3UaigVfw6ZHPBaPBupwTg';
-
-    $notification = [
-        'title' => $title,
-        'body' => $body,
-        'icon' => 'http://localhost/testsipinjam/assets/img/icon.ico',
-        'click_action' => 'http://localhost/testsipinjam/admin/'
-    ];
-
-    $payload = [
-        'to' => $token,
-        'notification' => $notification,
-        'data' => $data,
-        'priority' => 'high',
-        'webpush' => [
-            'notification' => $notification,
-            'fcm_options' => [
-                'link' => 'http://localhost/testsipinjam/admin/?view=datapinjambarang'
-            ]
-        ]
-    ];
-
-    $headers = [
-        'Authorization: key=' . $serverKey,
-        'Content-Type: application/json'
-    ];
-
-    $ch = curl_init();
-    curl_setopt($ch, CURLOPT_URL, $url);
-    curl_setopt($ch, CURLOPT_POST, true);
-    curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
-
-    $result = curl_exec($ch);
-    $httpcode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
-
-    // ✅ PERBAIKAN 1: Log ke server file (PHP error log)
-    $token_preview = substr($token, 0, 30) . '...';
-    if ($httpcode !== 200) {
-        error_log("❌ FCM FAILED | HTTP: $httpcode | Token: $token_preview | Response: $result");
-    } else {
-        error_log("✅ FCM SUCCESS | HTTP: $httpcode | Token: $token_preview");
-    }
-
-    // ✅ PERBAIKAN 2: Return detail untuk tracking
-    return [
-        'success' => $httpcode === 200,
-        'http_code' => $httpcode,
-        'response' => $result,
-        'token_preview' => $token_preview
-    ];
+// Jika fcm_send.php ada di folder yang sama
+if (file_exists('fcm_send.php')) {
+    include_once 'fcm_send.php';
+} elseif (file_exists('../fcm_send.php')) {
+    include_once '../fcm_send.php';
+} elseif (file_exists('../../fcm_send.php')) {
+    include_once '../../fcm_send.php';
 }
 
 // CSRF token
@@ -443,7 +383,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['simpan'])) {
           mysqli_query($conn, "INSERT INTO notice1 (id_pinjambarang, id_user, waktu, status) VALUES ($id_pinjam_insert, $id_user, " . time() . ", 0)");
 
           // ===============================
-          // ✅ PERBAIKAN 3: KIRIM NOTIFIKASI FCM DENGAN LOGGING LENGKAP
+          // ✅ KIRIM NOTIFIKASI FCM MENGGUNAKAN FUNCTION DARI fcm_send.php
           // ===============================
           
           $query_user = mysqli_query($conn, "SELECT nama_lengkap FROM user WHERE id = '$id_user' LIMIT 1");
@@ -454,39 +394,63 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['simpan'])) {
           $tgl_indo = date('d/m/Y', strtotime($tgl_mulai));
           $waktu_info = "$waktu_mulai - $waktu_selesai";
           
-            // Get user data
-            $query_user = mysqli_query($conn, "SELECT nama_lengkap FROM user WHERE id = '$id_user' LIMIT 1");
-            $data_user = mysqli_fetch_assoc($query_user);
-            $nama_peminjam = $data_user['nama_lengkap'] ?? 'User';
-
-            $nama_gedung = $data_barang['nama_barang'] ?? 'Gedung';
-            $tgl_indo = date('d/m/Y', strtotime($tgl_mulai));
-            $waktu_info = "$waktu_mulai - $waktu_selesai";
-
-            // ✅ KIRIM NOTIFIKASI KE SEMUA ADMIN (FCM V1 API)
-            $fcm_title = "🔔 Peminjaman Baru!";
-            $fcm_body = "$nama_peminjam mengajukan peminjaman $nama_gedung pada $tgl_indo ($waktu_info)";
-            $fcm_data = [
-                'booking_id' => (string)$id_pinjam_insert,
-                'type' => 'new_booking',
-                'gedung' => $nama_gedung,
-                'tanggal' => $tgl_indo,
-                'waktu' => $waktu_info,
-                'peminjam' => $nama_peminjam
-            ];
-
-            // Satu function call untuk kirim ke SEMUA ADMIN
-            $fcm_result = sendNotificationToAllAdmins($conn, $fcm_title, $fcm_body, $fcm_data);
-
-            $fcm_success_count = 0;
-            $fcm_failed_count = 0;
-            $fcm_results = [];
-
-            if ($fcm_result && is_array($fcm_result)) {
-                $fcm_success_count = $fcm_result['success'] ?? 0;
-                $fcm_failed_count = $fcm_result['failed'] ?? 0;
-                $fcm_results = $fcm_result['details'] ?? [];
-            }
+          // Siapkan array untuk tracking hasil
+          $fcm_results = [];
+          $fcm_success_count = 0;
+          $fcm_failed_count = 0;
+          
+          // Query semua admin
+          $query_admins = mysqli_query($conn, "SELECT id, username, nama_lengkap FROM user WHERE level = 'admin'");
+          
+          if ($query_admins && mysqli_num_rows($query_admins) > 0) {
+              while($admin = mysqli_fetch_assoc($query_admins)) {
+                  // Gunakan function dari fcm_send.php
+                  if (function_exists('sendFCMNotification')) {
+                      $fcm_result = sendFCMNotification(
+                          $admin['id'], // User ID admin
+                          "🔔 Peminjaman Baru!", // Title
+                          "$nama_peminjam mengajukan peminjaman $nama_gedung pada $tgl_indo ($waktu_info)", // Body
+                          'http://localhost/testsipinjam/admin/?view=datapinjambarang', // Click action
+                          '' // Image URL (optional)
+                      );
+                      
+                      // Tracking hasil
+                      $is_success = $fcm_result['success'] ?? false;
+                      $error_msg = $fcm_result['message'] ?? 'Unknown error';
+                      
+                      $fcm_results[] = [
+                          'admin' => $admin['username'],
+                          'nama' => $admin['nama_lengkap'],
+                          'success' => $is_success,
+                          'http_code' => $is_success ? 200 : 400,
+                          'token_preview' => 'Check fcm_tokens table',
+                          'error_message' => $is_success ? '' : $error_msg
+                      ];
+                      
+                      if ($is_success) {
+                          $fcm_success_count++;
+                          error_log("✅ FCM SUCCESS for admin: {$admin['username']}");
+                      } else {
+                          $fcm_failed_count++;
+                          error_log("❌ FCM FAILED for admin: {$admin['username']} | Error: $error_msg");
+                      }
+                  } else {
+                      // Jika function tidak tersedia
+                      $fcm_results[] = [
+                          'admin' => $admin['username'],
+                          'nama' => $admin['nama_lengkap'],
+                          'success' => false,
+                          'http_code' => 0,
+                          'token_preview' => 'N/A',
+                          'error_message' => 'fcm_send.php tidak di-include atau function tidak ditemukan'
+                      ];
+                      $fcm_failed_count++;
+                      error_log("❌ FCM function not found for admin: {$admin['username']}");
+                  }
+              }
+          } else {
+              error_log("⚠️ No admin found in database");
+          }
           
           // ✅ PERBAIKAN 4: Format info recurring
           $recurring_info = '';
@@ -528,17 +492,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['simpan'])) {
           
           // Output detail per admin
           foreach($fcm_results as $idx => $res) {
-              $status_icon = ($res['status'] === 'success') ? '✅' : '❌';  // ← BARU
-              $status_text = strtoupper($res['status']);  // ← BARU
-              $color = ($res['status'] === 'success') ? '#10b981' : '#ef4444';  // ← BARU
-              $admin_name = addslashes($res['username'] ?? 'Unknown');  // ← BARU
-              $admin_level = addslashes($res['level'] ?? 'admin');  // ← BARU
+              $status_icon = $res['success'] ? '✅' : '❌';
+              $status_text = $res['success'] ? 'SUCCESS' : 'FAILED';
+              $color = $res['success'] ? '#10b981' : '#ef4444';
+              $admin_name = addslashes($res['nama']);
+              $admin_username = addslashes($res['admin']);
+              $error_msg = isset($res['error_message']) ? addslashes($res['error_message']) : '';
               
               $num = $idx + 1;
-              echo "console.log('%c{$num}. {$admin_name} (@{$admin_level})', 'color: {$color}; font-weight: bold');\n";
+              echo "console.log('%c{$num}. {$admin_name} (@{$admin_username})', 'color: {$color}; font-weight: bold');\n";
               echo "console.log('   Status: {$status_icon} {$status_text}');\n";
               echo "console.log('   HTTP Code: {$res['http_code']}');\n";
               echo "console.log('   Token: {$res['token_preview']}');\n";
+              
+              if (!$res['success'] && !empty($error_msg)) {
+                  echo "console.log('   ⚠️ Error: {$error_msg}');\n";
+              }
+              
               echo "console.log('');\n";
           }
           

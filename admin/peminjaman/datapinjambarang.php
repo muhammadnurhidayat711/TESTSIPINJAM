@@ -1,16 +1,84 @@
 <?php
 // ========= Pastikan koneksi $conn (mysqli) sudah dibuat sebelum file ini =========
+// Include FCM Helper
+include_once '../../fcm_helper.php';
 
 // ================== PROSES AKSI ==================
 if (isset($_GET['id_approve'])) {
   $id_approve = $_GET['id_approve'];
+  
+  // Ambil data peminjaman untuk notifikasi
+  $query = "SELECT pb.*, u.id as user_id, u.nama_lengkap, b.nama_barang 
+            FROM pinjambarang pb 
+            JOIN user u ON pb.id_user = u.id 
+            JOIN barang b ON pb.id_barang = b.id 
+            WHERE pb.id_pinjam = ?";
+  $stmt_data = $conn->prepare($query);
+  $stmt_data->bind_param("s", $id_approve);
+  $stmt_data->execute();
+  $result = $stmt_data->get_result();
+  $data = $result->fetch_assoc();
+  $stmt_data->close();
+  
+  // Update status
   $stmtA = $conn->prepare("UPDATE pinjambarang SET status='approve' WHERE id_pinjam=?");
   $stmtA->bind_param("s", $id_approve);
   $stmtA->execute();
   $stmtA->close();
   
+  // Kirim notifikasi ke user jika data ditemukan
+  if ($data) {
+    $notifTitle = "✅ Peminjaman Gedung Disetujui";
+    $notifBody = "Peminjaman " . $data['nama_barang'] . " pada tanggal " . date('d/m/Y', strtotime($data['tgl_mulai'])) . " telah disetujui oleh admin.";
+    $clickAction = "http://localhost/TESTSIPINJAM/user/?view=databooking";
+    
+    $notifResult = sendFCMNotification($data['user_id'], $notifTitle, $notifBody, $clickAction);
+    
+    // Log hasil notifikasi (opsional)
+    error_log("FCM Approval Result: " . json_encode($notifResult));
+  }
+  
   $redirect_params = $_GET;
   unset($redirect_params['id_approve']);
+  $redirect_url = '?' . http_build_query($redirect_params);
+  
+  echo "<script>window.location.href='" . htmlspecialchars($redirect_url, ENT_QUOTES) . "';</script>";
+  exit;
+}
+
+if (isset($_GET['id_tolak'])) {
+  $id_tolak = $_GET['id_tolak'];
+  
+  // Ambil data untuk notifikasi
+  $query = "SELECT pb.*, u.id as user_id, u.nama_lengkap, b.nama_barang 
+            FROM pinjambarang pb 
+            JOIN user u ON pb.id_user = u.id 
+            JOIN barang b ON pb.id_barang = b.id 
+            WHERE pb.id_pinjam = ?";
+  $stmt_data = $conn->prepare($query);
+  $stmt_data->bind_param("s", $id_tolak);
+  $stmt_data->execute();
+  $result = $stmt_data->get_result();
+  $data = $result->fetch_assoc();
+  $stmt_data->close();
+  
+  // Update status
+  $stmtT = $conn->prepare("UPDATE pinjambarang SET status='ditolak' WHERE id_pinjam=?");
+  $stmtT->bind_param("s", $id_tolak);
+  $stmtT->execute();
+  $stmtT->close();
+  
+  // Kirim notifikasi penolakan
+  if ($data) {
+    $notifTitle = "❌ Peminjaman Gedung Ditolak";
+    $notifBody = "Maaf, peminjaman " . $data['nama_barang'] . " pada tanggal " . date('d/m/Y', strtotime($data['tgl_mulai'])) . " ditolak oleh admin.";
+    $clickAction = "http://localhost/TESTSIPINJAM/user/?view=databooking";
+    
+    sendFCMNotification($data['user_id'], $notifTitle, $notifBody, $clickAction);
+  }
+  
+  $redirect_params = $_GET;
+  unset($redirect_params['id_tolak']);
   $redirect_url = '?' . http_build_query($redirect_params);
   
   echo "<script>window.location.href='" . htmlspecialchars($redirect_url, ENT_QUOTES) . "';</script>";

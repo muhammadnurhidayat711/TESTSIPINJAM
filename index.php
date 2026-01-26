@@ -938,17 +938,7 @@ document.addEventListener('keydown', function(e) {
 <script src="/testsipinjam/assets/js/firebase.js"></script>
 
 
-<script>
-document.addEventListener("DOMContentLoaded", function () {
-    const userId = <?= json_encode($_SESSION['user_id'] ?? null) ?>;
 
-    if (userId) {
-        initFCM(userId);
-    } else {
-        console.warn("❌ User belum login, FCM tidak dijalankan");
-    }
-});
-</script>
 
 </body>
 </html>

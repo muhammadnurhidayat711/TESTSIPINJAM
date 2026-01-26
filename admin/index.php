@@ -881,7 +881,7 @@ include 'cek.php';
       return confirm('Apakah Anda yakin ingin keluar dari sistem?');
     }
 
-    // Real-time DateTime (Indonesia) - Clean & Simple
+    // Real-time DateTime (Indonesia)
     function updateDateTime() {
       const el = document.getElementById('currentDateTime');
       if (!el) return;
@@ -923,18 +923,73 @@ include 'cek.php';
     })();
 
     // Notice
-    (function(){
-      const audio = document.getElementById('noticeAudio');
-      function notice(){
-        $.post('notice.php', function(data){
-          if(parseInt(data,10) === 1 && audio){
-            audio.volume = 1;
-            audio.play().catch(()=>{});
-          }
-        });
+    // Notice - Diperbaiki
+(function(){
+  const audio = document.getElementById('noticeAudio');
+  
+  function notice(){
+    $.ajax({
+      url: 'notice.php',  // Relative path dari admin/index.php
+      method: 'POST',
+      timeout: 3000,  // Timeout 3 detik
+      success: function(data){
+        if(parseInt(data,10) === 1 && audio){
+          audio.volume = 1;
+          audio.play().catch(function(err){
+            console.warn('🔇 Audio autoplay blocked:', err.message);
+          });
+        }
+      },
+      error: function(xhr, status, error){
+        // Hanya log jika error bukan 404
+        if(xhr.status !== 404){
+          console.error('❌ Notice error:', status, xhr.status);
+        }
+      },
+      complete: function(){
+        // Jadwalkan polling berikutnya setelah request selesai
+        setTimeout(notice, 5000);  // 5 detik
       }
-      setInterval(notice, 1000);
-    })();
+    });
+  }
+  
+  // Mulai polling setelah 2 detik (berikan waktu halaman load)
+  setTimeout(notice, 2000);
+})();
+
   </script>
+
+  <!-- ✅ FIREBASE SDK -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-messaging.js"></script>
+  
+  <!-- ✅ FIREBASE.JS -->
+  <script src="../assets/js/firebase.js"></script>
+  
+  <!-- ✅ INITIALIZE FCM - HANYA INI SATU-SATUNYA TEMPAT -->
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      // Ambil user ID dari session menggunakan key 'id'
+      const userId = <?php echo isset($_SESSION['id']) ? json_encode($_SESSION['id']) : 'null'; ?>;
+      const username = <?php echo isset($_SESSION['username']) ? json_encode($_SESSION['username']) : 'null'; ?>;
+
+      console.log('👤 Admin Info:', { id: userId, username: username });
+
+      if (userId) {
+        console.log('✅ Initializing FCM...');
+        
+        if (typeof initFCM === 'function') {
+          initFCM(userId)
+            .then(() => console.log('✅✅ FCM Ready!'))
+            .catch(err => console.error('❌ FCM Error:', err));
+        } else {
+          console.error('❌ initFCM not found');
+        }
+      } else {
+        console.error('❌ Not logged in');
+      }
+    });
+  </script>
+
 </body>
 </html>

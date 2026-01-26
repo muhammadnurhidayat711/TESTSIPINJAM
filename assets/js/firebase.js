@@ -1,5 +1,10 @@
 console.log("🔥 firebase.js LOADED");
 
+// ✅ GUARD: Cegah multiple initialization
+if (window.fcmInitialized) {
+    console.warn('⚠️ FCM already initialized, skipping...');
+}
+
 /* ===============================
    FIREBASE CONFIG
 ================================ */
@@ -14,16 +19,46 @@ const firebaseConfig = {
     measurementId: "G-JH44M4SKSY"
 };
 
-// Init Firebase
-firebase.initializeApp(firebaseConfig);
+// Init Firebase (hanya jika belum diinit)
+if (!firebase.apps.length) {
+    firebase.initializeApp(firebaseConfig);
+}
 const messaging = firebase.messaging();
+
+/* ===============================
+   HELPER: Deteksi Base Path
+================================ */
+
+function getBasePath() {
+    const path = window.location.pathname;
+    // Jika di folder admin
+    if (path.includes('/admin/')) {
+        return '../';
+    }
+    // ✅ Jika di folder user
+    if (path.includes('/user/')) {
+        return '../';
+    }
+    // Jika di root
+    return '';
+}
 
 /* ===============================
    INIT FCM (GLOBAL FUNCTION)
 ================================ */
 
 async function initFCM(userId) {
+    // ✅ GUARD: Cegah double call
+    if (window.fcmInitialized) {
+        console.warn('⚠️ initFCM already called, skipping...');
+        return Promise.resolve();
+    }
+    
+    window.fcmInitialized = true; // ✅ Set flag
+    
     try {
+        const basePath = getBasePath();
+        
         // 1. Request permission
         const permission = await Notification.requestPermission();
         console.log("🔔 Notification permission:", permission);
@@ -31,12 +66,13 @@ async function initFCM(userId) {
         if (permission !== "granted") {
             console.warn("❌ Notification permission denied");
             return;
-        } // ✅ PERBAIKAN: Kurung kurawal penutup ditambahkan
+        }
         
-        // 2. Register Service Worker
-        const registration = await navigator.serviceWorker.register(
-            "testsipinjam/firebase-messaging-sw.js"
-        );
+        // 2. Register Service Worker (dengan path dinamis)
+        const swPath = basePath + "firebase-messaging-sw.js";
+        console.log("📍 SW Path:", swPath);
+        
+        const registration = await navigator.serviceWorker.register(swPath);
         console.log("✅ SW registered:", registration.scope);
         
         // 3. Get FCM Token
@@ -52,8 +88,11 @@ async function initFCM(userId) {
         
         console.log("✅ FCM TOKEN:", token);
         
-        // 4. Send token to backend
-        await fetch("testsipinjam/save_token.php", {
+        // 4. Send token to backend (dengan path dinamis)
+        const saveTokenUrl = basePath + "save_token.php";
+        console.log("📍 Save Token URL:", saveTokenUrl);
+        
+        const response = await fetch(saveTokenUrl, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
@@ -64,24 +103,70 @@ async function initFCM(userId) {
             })
         });
         
-        console.log("📡 Token sent to server");
+        if (response.ok) {
+            console.log("📡 Token sent to server successfully");
+        } else {
+            console.error("❌ Failed to save token:", response.status);
+        }
+        
+        // ✅ 5. SETUP FOREGROUND MESSAGE HANDLER
+        setupForegroundHandler(basePath);
         
     } catch (error) {
+        window.fcmInitialized = false; // ✅ Reset flag jika error
         console.error("🔥 initFCM ERROR:", error);
+        console.error("Error details:", error.message);
     }
 }
 
 /* ===============================
-   FOREGROUND MESSAGE
+   FOREGROUND MESSAGE HANDLER
 ================================ */
 
-messaging.onMessage((payload) => {
-    console.log("📩 FCM Message received:", payload);
+function setupForegroundHandler(basePath) {
+    messaging.onMessage((payload) => {
+        console.log("📩 FCM Message received (foreground):", payload);
+        
+        // Ambil data notifikasi
+        const title = payload.notification?.title || 'Notifikasi Baru';
+        const body = payload.notification?.body || 'Ada peminjaman baru';
+        const icon = payload.notification?.icon || basePath + 'assets/img/icon.ico';
+        
+        console.log("🔔 Showing notification:", { title, body, icon });
+        
+        // Tampilkan notifikasi browser
+        if (Notification.permission === "granted") {
+            const notificationOptions = {
+                body: body,
+                icon: icon,
+                badge: basePath + 'assets/img/icon.ico',
+                tag: 'sipinjam-notification',
+                requireInteraction: true,
+                vibrate: [200, 100, 200],
+                data: {
+                    url: payload.data?.url || window.location.href
+                }
+            };
+            
+            const notification = new Notification(title, notificationOptions);
+            
+            // Handle klik notifikasi
+            notification.onclick = function(event) {
+                event.preventDefault();
+                window.focus();
+                notification.close();
+                
+                // Redirect jika ada URL
+                if (payload.data?.url) {
+                    window.location.href = payload.data.url;
+                }
+            };
+            
+            console.log("✅ Notification displayed");
+        } else {
+            console.warn("⚠️ Notification permission not granted");
+        }
+    });
     
-    if (Notification.permission === "granted") {
-        new Notification(payload.notification.title, {
-            body: payload.notification.body,
-            icon: payload.notification.icon || "/icon.png"
-        });
-    }
-});
+    console.log("✅ Foreground message handler setup complete");
+}
