@@ -1,9 +1,7 @@
 <?php
 header('Content-Type: application/json');
 
-// Enable error reporting untuk debugging
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
+error_reporting(0);
 
 // Start session dan koneksi database
 session_start();

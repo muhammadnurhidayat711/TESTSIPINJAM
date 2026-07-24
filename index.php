@@ -786,7 +786,34 @@ switch ($alertParam) {
     </div>
     
     <div class="modal-body">
-      
+
+      <!-- ============================== -->
+      <!-- Version 2.1 - Maret 2026 (NEW) -->
+      <!-- ============================== -->
+      <div class="changelog-section">
+        <div class="changelog-version" style="border-left-color: #f59e0b; background: linear-gradient(135deg, #fffbeb, #fef3c7);">
+          <div class="version-header">
+            <div class="version-number">⚡ SIPINJAM v2.1</div>
+            <div class="version-date" style="color: #d97706; background: rgba(245,158,11,0.12);">Maret 2026</div>
+          </div>
+
+          <ul class="changelog-list">
+            <li>
+              <span class="badge-category badge-new">New</span>
+              <strong>Fitur Alert Box (Peringatan Kemacetan)</strong> — User (Peminjam) akan mendapatkan pesan konfirmasi sekaligus peringatan kemacetan yang berpotensi terjadi di area sekolah akibat arus masuk dan keluar kendaraan
+            </li>
+            <li>
+              <span class="badge-category badge-new">New</span>
+              <strong>Alert Gedung Utama (Jasmine, Bluebell, Lotus)</strong> — Peringatan kemacetan otomatis aktif pada peminjaman 3 gedung utama yang mengalami kondisi jam <em>overlap</em> (tumpang tindih) satu sama lain
+            </li>
+            <li>
+              <span class="badge-category badge-new">New</span>
+              <strong>Alert Jarak Acara &lt; 1 Jam</strong> — Alert juga berlaku apabila jarak waktu mulai acara baru kurang dari 1 jam setelah acara sebelumnya selesai di antara gedung-gedung utama, meskipun jadwal tidak tumpang tindih secara langsung
+            </li>
+          </ul>
+        </div>
+      </div>
+
       <!-- Version 2.0 - November 2025 -->
       <div class="changelog-section">
         <div class="changelog-version">
@@ -796,6 +823,10 @@ switch ($alertParam) {
           </div>
           
           <ul class="changelog-list">
+            <li>
+              <span class="badge-category badge-new">New</span>
+              <strong>Sistem Notifikasi Real-time</strong> - Notifikasi push berbasis Firebase Cloud Messaging 
+            </li>
             <li>
               <span class="badge-category badge-new">New</span>
               <strong>Kalender Interaktif Dashboard</strong> - Klik tanggal kosong untuk langsung membuat peminjaman baru dengan auto-fill tanggal

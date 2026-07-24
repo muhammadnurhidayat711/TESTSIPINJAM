@@ -32,7 +32,7 @@ if (isset($_GET['id']) && isset($_GET['action'])) {
             $notifTitle = "✅ Peminjaman Studio Disetujui";
             $notifBody = "Peminjaman " . $data['namastudio'] . " pada " . date('d/m/Y', strtotime($data['tglpinjam'])) . " disetujui.";
             
-            sendFCMNotification($data['user_id'], $notifTitle, $notifBody, "http://localhost/TESTSIPINJAM/user/?view=databookingstudio");
+            sendFCMNotification($data['user_id'], $notifTitle, $notifBody, base_url('user/?view=databookingstudio'));
             header("location:../index.php?view=datapinjamstudio&alert=approved");
         }
         
@@ -45,7 +45,7 @@ if (isset($_GET['id']) && isset($_GET['action'])) {
             $notifTitle = "❌ Peminjaman Studio Ditolak";
             $notifBody = "Peminjaman " . $data['namastudio'] . " pada " . date('d/m/Y', strtotime($data['tglpinjam'])) . " ditolak.";
             
-            sendFCMNotification($data['user_id'], $notifTitle, $notifBody, "http://localhost/TESTSIPINJAM/user/?view=databookingstudio");
+            sendFCMNotification($data['user_id'], $notifTitle, $notifBody, base_url('user/?view=databookingstudio'));
             header("location:../index.php?view=datapinjamstudio&alert=rejected");
         }
     }

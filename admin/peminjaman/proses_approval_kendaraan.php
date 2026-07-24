@@ -37,7 +37,7 @@ if (isset($_GET['id']) && isset($_GET['action'])) {
         if ($stmt->execute()) {
             $notifTitle = "✅ Peminjaman Kendaraan Disetujui";
             $notifBody = "Peminjaman " . $data['namaruangan'] . " pada tanggal " . date('d/m/Y', strtotime($data['tglpinjam'])) . " telah disetujui.";
-            $clickAction = "http://localhost/TESTSIPINJAM/user/?view=databookingkendaraan";
+            $clickAction = base_url('user/?view=databookingkendaraan');
             
             sendFCMNotification($data['user_id'], $notifTitle, $notifBody, $clickAction);
             header("location:../index.php?view=datapinjamruangan&alert=approved");
@@ -53,7 +53,7 @@ if (isset($_GET['id']) && isset($_GET['action'])) {
         if ($stmt->execute()) {
             $notifTitle = "❌ Peminjaman Kendaraan Ditolak";
             $notifBody = "Maaf, peminjaman " . $data['namaruangan'] . " pada tanggal " . date('d/m/Y', strtotime($data['tglpinjam'])) . " ditolak.";
-            $clickAction = "http://localhost/TESTSIPINJAM/user/?view=databookingkendaraan";
+            $clickAction = base_url('user/?view=databookingkendaraan');
             
             sendFCMNotification($data['user_id'], $notifTitle, $notifBody, $clickAction);
             header("location:../index.php?view=datapinjamruangan&alert=rejected");

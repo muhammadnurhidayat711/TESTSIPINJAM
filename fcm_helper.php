@@ -5,6 +5,23 @@
  */
 
 /**
+ * Generate dynamic base URL — ganti hardcoded localhost
+ * Deteksi path project dari __DIR__ (root = folder fcm_helper.php)
+ */
+function base_url($path = '') {
+    static $base = null;
+    if ($base === null) {
+        $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+        $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+        $projectDir = str_replace('\\', '/', realpath(__DIR__));
+        $docRoot = str_replace('\\', '/', realpath($_SERVER['DOCUMENT_ROOT']));
+        $projectPath = '/' . ltrim(str_replace($docRoot, '', $projectDir), '/');
+        $base = $protocol . '://' . $host . $projectPath;
+    }
+    return rtrim($base, '/') . '/' . ltrim($path, '/');
+}
+
+/**
  * Mendapatkan OAuth 2.0 Access Token untuk FCM V1 API
  * Menggunakan Service Account JWT untuk authenticate
  */
@@ -118,26 +135,26 @@ function getFCMV1AccessToken() {
     // SSL Configuration
     // PRODUCTION: Gunakan SSL verification (true)
     // DEVELOPMENT: Jika ada masalah certificate, set ke false
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); // Set true untuk production
-    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false); // Set true untuk production
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
     curl_setopt($ch, CURLOPT_TIMEOUT, 30);
-    
+
     $response = curl_exec($ch);
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     $curlError = curl_error($ch);
     $curlErrno = curl_errno($ch);
-    
+
     if ($curlErrno) {
         error_log("FCM Error: cURL error [$curlErrno] - " . $curlError);
         curl_close($ch);
         return false;
     }
-    
+
     curl_close($ch);
-    
+
     // Parse response
     $responseData = json_decode($response, true);
-    
+
     if ($httpCode !== 200) {
         error_log("FCM Error: Failed to get access token. HTTP Code: " . $httpCode);
         error_log("FCM Error Response: " . $response);
@@ -236,23 +253,23 @@ function sendFCMV1Notification($token, $title, $body, $data = [], &$errorMessage
     // SSL Configuration
     // PRODUCTION: Gunakan SSL verification (true)
     // DEVELOPMENT: Jika ada masalah certificate, set ke false
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); // Set true untuk production
-    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false); // Set true untuk production
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
     curl_setopt($ch, CURLOPT_TIMEOUT, 30);
-    
+
     $response = curl_exec($ch);
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     $curlError = curl_error($ch);
     $curlErrno = curl_errno($ch);
-    
+
     if ($curlErrno) {
         error_log("FCM Error: cURL error sending notification [$curlErrno] - " . $curlError);
         curl_close($ch);
         return false;
     }
-    
+
     curl_close($ch);
-    
+
     if ($httpCode === 200) {
         error_log("FCM Success: Notification sent to token: " . substr($token, 0, 20) . "...");
         return true;
@@ -371,5 +388,35 @@ function sendNotificationToUser($conn, $userId, $title, $body, $data = []) {
     }
     
     return sendFCMV1Notification($user['token'], $title, $body, $data);
+}
+
+/**
+ * Legacy wrapper — dipanggil admin approval files dgn parameter (user_id, title, body, clickAction)
+ * Mencari token user di DB, kirim via FCM V1 API
+ */
+function sendFCMNotification($userId, $title, $body, $data = '', $image = '') {
+    global $conn;
+    $stmt = $conn->prepare("SELECT token FROM fcm_tokens WHERE user_id = ? LIMIT 1");
+    $stmt->bind_param("i", $userId);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $row = $result->fetch_assoc();
+    $stmt->close();
+
+    if (!$row || empty($row['token'])) {
+        error_log("FCM Wrapper: No token for user_id=$userId");
+        return ['success' => false, 'message' => 'No token found'];
+    }
+
+    // Jika $data string, treat sebagai click_action URL
+    $payload = [];
+    if (is_string($data) && $data !== '') {
+        $payload['click_action'] = $data;
+    } elseif (is_array($data)) {
+        $payload = $data;
+    }
+
+    $sent = sendFCMV1Notification($row['token'], $title, $body, $payload);
+    return ['success' => $sent, 'message' => $sent ? 'sent' : 'failed'];
 }
 ?>

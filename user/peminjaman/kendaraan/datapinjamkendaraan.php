@@ -18,30 +18,29 @@ function fmt_waktu($hms)
 
 // ========= Form Processing with Security =========
 if (isset($_POST['hapus']) && isset($_POST['id_pk']) && isset($_POST['id_kendaraan'])) {
-  $id_pk = mysqli_real_escape_string($conn, $_POST['id_pk']);
-  $id_kendaraan = mysqli_real_escape_string($conn, $_POST['id_kendaraan']);
+  $id_pk = (int)($_POST['id_pk'] ?? 0);
+  $id_kendaraan = (int)($_POST['id_kendaraan'] ?? 0);
 
-  $selSto = mysqli_query($conn, "SELECT * FROM kendaraan WHERE id_kendaraan='" . $id_kendaraan . "'");
+  $selSto = mysqli_query($conn, "SELECT * FROM kendaraan WHERE id_kendaraan = $id_kendaraan");
   $sto = mysqli_fetch_array($selSto);
   $sisa = 'menunggu';
 
-  mysqli_query($conn, "UPDATE kendaraan SET status='" . $sisa . "' WHERE id_kendaraan='" . $id_kendaraan . "'");
-  mysqli_query($conn, "DELETE FROM pinjamkendaraan WHERE id_pk='" . $id_pk . "'");
+  mysqli_query($conn, "DELETE FROM pinjamkendaraan WHERE id_pk = $id_pk");
 
-  header("Location: ?view=datapinjamkendaraan");
+
   exit;
 
 } elseif (isset($_POST['ubah']) && isset($_POST['id_pk']) && isset($_POST['id_kendaraan'])) {
-  $id_pk = mysqli_real_escape_string($conn, $_POST['id_pk']);
-  $id_kendaraan = mysqli_real_escape_string($conn, $_POST['id_kendaraan']);
+  $id_pk = (int)($_POST['id_pk'] ?? 0);
+  $id_kendaraan = (int)($_POST['id_kendaraan'] ?? 0);
 
-  $selSto = mysqli_query($conn, "SELECT * FROM kendaraan WHERE id_kendaraan='" . $id_kendaraan . "'");
+  $selSto = mysqli_query($conn, "SELECT * FROM kendaraan WHERE id_kendaraan = $id_kendaraan");
   $sto = mysqli_fetch_array($selSto);
   $sisa = 'menunggu';
   $status = 'selesai';
 
-  mysqli_query($conn, "UPDATE kendaraan SET status='" . $sisa . "' WHERE id_kendaraan='" . $id_kendaraan . "'");
-  mysqli_query($conn, "UPDATE pinjamkendaraan SET status='" . $status . "' WHERE id_pk='" . $id_pk . "'");
+  mysqli_query($conn, "UPDATE kendaraan SET status='$sisa' WHERE id_kendaraan = $id_kendaraan");
+  mysqli_query($conn, "UPDATE pinjamkendaraan SET status='$status' WHERE id_pk = $id_pk");
 
   header("Location: ?view=datapinjamkendaraan");
   exit;

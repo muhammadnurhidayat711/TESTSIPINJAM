@@ -9,9 +9,7 @@ if (!isset($_SESSION['id'])) {
     exit();
 }
 
-// Debug mode - hapus setelah berhasil
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
+error_reporting(0);
 
 $id_user = $_SESSION['id'];
 $level = $_SESSION['level'];

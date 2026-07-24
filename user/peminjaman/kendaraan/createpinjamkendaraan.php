@@ -6,6 +6,9 @@
 // ========================================
 // ✅ PERBAIKAN: Tangkap parameter tanggal dari URL
 // ========================================
+
+require_once __DIR__ . '/../../../fcm_helper.php';
+
 $default_date = '';
 $default_date_end = '';
 
@@ -50,7 +53,7 @@ if (isset($_POST['simpan'])) {
   $tgl_selesai = $_POST['tgl_selesai'];
   $waktu_selesai = $_POST['waktu_selesai'];
   $id_user = $_POST['id_user'];
-  $id_kendaraan = $_POST['id_kendaraan'];
+  $id_kendaraan = (int) ($_POST['id_kendaraan'] ?? 0);
   $tujuan = mysqli_real_escape_string($conn, $_POST['tujuan']);
   $bagian = mysqli_real_escape_string($conn, $_POST['bagian']);
   $status = $_POST['status'];
@@ -108,20 +111,23 @@ if (isset($_POST['simpan'])) {
       ";
     } else {
       // Ambil info kendaraan
-      $query_kendaraan_dipilih = mysqli_query($conn, "SELECT * FROM kendaraan WHERE id_kendaraan = '$id_kendaraan'");
+      $query_kendaraan_dipilih = mysqli_query($conn, "SELECT * FROM kendaraan WHERE id_kendaraan = $id_kendaraan");
       $kendaraan_dipilih = mysqli_fetch_assoc($query_kendaraan_dipilih);
       
       // CEK JADWAL BENTROK
-      $cek_jadwal = mysqli_query($conn, "
+      $stmt_jadwal = $conn->prepare("
         SELECT pk.*, k.nama_kendaraan, k.deskripsi, u.nama_lengkap
         FROM pinjamkendaraan pk
         LEFT JOIN kendaraan k ON pk.id_kendaraan = k.id_kendaraan
         LEFT JOIN user u ON pk.id_user = u.id
-        WHERE pk.id_kendaraan = '$id_kendaraan' 
+        WHERE pk.id_kendaraan = ?
         AND pk.status IN ('menunggu', 'disetujui', 'dipinjam')
-        AND TIMESTAMP(pk.tgl_mulai, pk.waktu_mulai) < TIMESTAMP('$tgl_selesai', '$waktu_selesai')
-        AND TIMESTAMP(pk.tgl_selesai, pk.waktu_selesai) > TIMESTAMP('$tgl_mulai', '$waktu_mulai')
+        AND TIMESTAMP(pk.tgl_mulai, pk.waktu_mulai) < TIMESTAMP(?, ?)
+        AND TIMESTAMP(pk.tgl_selesai, pk.waktu_selesai) > TIMESTAMP(?, ?)
       ");
+      $stmt_jadwal->bind_param("issss", $id_kendaraan, $tgl_selesai, $waktu_selesai, $tgl_mulai, $waktu_mulai);
+      $stmt_jadwal->execute();
+      $cek_jadwal = $stmt_jadwal->get_result();
 
       if (!$cek_jadwal) {
         die("Error Query: " . mysqli_error($conn));
@@ -218,10 +224,14 @@ if (isset($_POST['simpan'])) {
         if ($insert) {
           $id_pinjam_insert = mysqli_insert_id($conn);
           
-          // Kirim notifikasi
+          // ===============================
+          // ✅ NOTIFIKASI DATABASE + FCM
+          // ===============================
+
+          // 1. Notifikasi Database (seperti biasa)
           $loop_user = mysqli_query($conn, "SELECT `id` FROM `user` WHERE `level` = 'admin'");
           $jumlah_admin = mysqli_num_rows($loop_user);
-          
+
           while ($lu = mysqli_fetch_assoc($loop_user)) {
             mysqli_query($conn, "
               INSERT INTO `notice2` 
@@ -230,6 +240,43 @@ if (isset($_POST['simpan'])) {
                   `waktu` = " . time() . ", 
                   `status` = 0
             ");
+          }
+
+          // 2. Get data peminjam
+          $query_peminjam = mysqli_query($conn, "SELECT nama_lengkap FROM user WHERE id = '$id_user' LIMIT 1");
+          $data_peminjam = mysqli_fetch_assoc($query_peminjam);
+          $nama_peminjam = $data_peminjam['nama_lengkap'] ?? 'User';
+
+          // 3. Format data notifikasi
+          $nama_kendaraan = $kendaraan_dipilih['nama_kendaraan'] ?? 'Kendaraan';
+          $tgl_indo = date('d/m/Y', strtotime($tgl_mulai));
+          $waktu_info = substr($waktu_mulai, 0, 5) . " - " . substr($waktu_selesai, 0, 5);
+
+          // 4. Kirim FCM Push Notification ke semua admin
+          $fcm_title = "🚗 Peminjaman Kendaraan Baru!";
+          $fcm_body = "$nama_peminjam mengajukan peminjaman $nama_kendaraan pada $tgl_indo ($waktu_info)";
+          $fcm_data = [
+              'booking_id' => (string)$id_pinjam_insert,
+              'type' => 'new_vehicle_booking',
+              'kendaraan' => $nama_kendaraan,
+              'tanggal' => $tgl_indo,
+              'waktu' => $waktu_info,
+              'peminjam' => $nama_peminjam,
+              'tujuan' => $tujuan,
+              'bagian' => $bagian
+          ];
+
+          $fcm_result = sendNotificationToAllAdmins($conn, $fcm_title, $fcm_body, $fcm_data);
+
+          // 5. Hitung statistik pengiriman
+          $fcm_success_count = 0;
+          $fcm_failed_count = 0;
+          $fcm_results = [];
+
+          if ($fcm_result && is_array($fcm_result)) {
+              $fcm_success_count = $fcm_result['success'] ?? 0;
+              $fcm_failed_count = $fcm_result['failed'] ?? 0;
+              $fcm_results = $fcm_result['details'] ?? [];
           }
 
           $durasi_text = "";
@@ -242,30 +289,84 @@ if (isset($_POST['simpan'])) {
             $durasi_text = $diff_minutes . " menit";
           }
 
-          $html_success = '<div style="text-align: left;">'.
-                    '<p><strong style="color:#28a745;font-size:16px;">✅ Peminjaman Berhasil!</strong></p><hr>'.
-                    '<table style="width:100%;border-collapse:collapse;">'.
-                    '<tr><td style="padding:8px;background:#f5f5f5;width:35%;"><b>🚗 Kendaraan</b></td><td style="padding:8px;">'.htmlspecialchars($kendaraan_dipilih['nama_kendaraan']).'</td></tr>'.
-                    '<tr><td style="padding:8px;background:#f5f5f5;"><b>📅 Waktu</b></td><td style="padding:8px;">'.$format_mulai.' - '.$format_selesai.'</td></tr>'.
-                    '<tr><td style="padding:8px;background:#f5f5f5;"><b>⏱️ Durasi</b></td><td style="padding:8px;">'.$durasi_text.'</td></tr>'.
-                    '<tr><td style="padding:8px;background:#f5f5f5;"><b>📊 Status</b></td><td style="padding:8px;"><span style="color:#ffc107;font-weight:bold;">⏳ Menunggu Persetujuan</span></td></tr>'.
-                    '</table><hr>'.
-                    '<p style="margin:10px 0;"><b>📧 Notifikasi telah dikirim ke '.$jumlah_admin.' admin.</b></p>'.
+          // ✅ Format HTML Success dengan FCM Stats
+          $html_success = '<div style="text-align: left; line-height: 1.6;">'.
+                    
+                    // Detail Peminjaman
+                    '<div style="padding: 16px; background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border-left: 4px solid #10b981; border-radius: 12px; margin-bottom: 16px;">'.
+                    '<div style="font-size: 16px; font-weight: 700; color: #047857; margin-bottom: 12px;">📋 Detail Peminjaman</div>'.
+                    '<table style="width: 100%; font-size: 14px;">'.
+                    '<tr><td style="padding: 6px 0; color: #065f46; font-weight: 600; width: 35%;">ID Booking</td><td style="padding: 6px 0;">: <code style="background: #fff; padding: 4px 8px; border-radius: 6px; font-weight: 700; color: #047857;">#'.$id_pinjam_insert.'</code></td></tr>'.
+                    '<tr><td style="padding: 6px 0; color: #065f46; font-weight: 600;">🚗 Kendaraan</td><td style="padding: 6px 0;">: <strong>'.htmlspecialchars($kendaraan_dipilih['nama_kendaraan']).'</strong></td></tr>'.
+                    '<tr><td style="padding: 6px 0; color: #065f46; font-weight: 600;">👤 Peminjam</td><td style="padding: 6px 0;">: '.htmlspecialchars($nama_peminjam).'</td></tr>'.
+                    '<tr><td style="padding: 6px 0; color: #065f46; font-weight: 600;">🏢 Bagian</td><td style="padding: 6px 0;">: '.htmlspecialchars($bagian).'</td></tr>'.
+                    '<tr><td style="padding: 6px 0; color: #065f46; font-weight: 600;">📅 Waktu</td><td style="padding: 6px 0;">: '.$format_mulai.' - '.$format_selesai.'</td></tr>'.
+                    '<tr><td style="padding: 6px 0; color: #065f46; font-weight: 600;">⏱️ Durasi</td><td style="padding: 6px 0;">: '.$durasi_text.'</td></tr>'.
+                    '</table>'.
+                    '</div>'.
+                    
+                    // Status Notifikasi FCM
+                    '<div style="padding: 16px; background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border-left: 4px solid #3b82f6; border-radius: 12px; margin-bottom: 16px;">'.
+                    '<div style="font-size: 15px; font-weight: 700; color: #1e40af; margin-bottom: 10px;">🔔 Status Notifikasi</div>'.
+                    '<div style="display: flex; gap: 20px; margin-bottom: 8px;">'.
+                    '<div style="flex: 1;">'.
+                    '<div style="font-size: 12px; color: #1e40af; margin-bottom: 4px;">Berhasil Terkirim</div>'.
+                    '<div style="font-size: 24px; font-weight: 800; color: #10b981;">'.$fcm_success_count.' <span style="font-size: 14px; font-weight: 600;">admin</span></div>'.
+                    '</div>'.
+                    '<div style="flex: 1;">'.
+                    '<div style="font-size: 12px; color: #1e40af; margin-bottom: 4px;">Gagal</div>'.
+                    '<div style="font-size: 24px; font-weight: 800; color: #ef4444;">'.$fcm_failed_count.'</div>'.
+                    '</div>'.
+                    '</div>'.
+                    '<div style="font-size: 12px; color: #1e40af; background: rgba(255, 255, 255, 0.6); padding: 8px 10px; border-radius: 6px; margin-top: 8px;">'.
+                    '💡 <strong>Tips:</strong> Tekan <kbd style="background: #fff; padding: 2px 6px; border-radius: 4px; border: 1px solid #cbd5e1;">F12</kbd> untuk melihat detail di Console'.
+                    '</div>'.
+                    '</div>'.
+                    
+                    // Status Approval
+                    '<div style="padding: 14px; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-left: 4px solid #f59e0b; border-radius: 12px;">'.
+                    '<div style="display: flex; align-items: start; gap: 12px;">'.
+                    '<div style="font-size: 28px; line-height: 1;">⏳</div>'.
+                    '<div>'.
+                    '<div style="font-weight: 700; color: #92400e; margin-bottom: 4px; font-size: 15px;">Menunggu Persetujuan Admin</div>'.
+                    '<div style="font-size: 13px; color: #78350f; line-height: 1.5;">Peminjaman akan diproses oleh admin. Anda akan menerima notifikasi setelah direview.</div>'.
+                    '</div>'.
+                    '</div>'.
+                    '</div>'.
+                    
                     '</div>';
-          
-          $html_success = addslashes($html_success);
 
+          $html_success = addslashes($html_success);
           $alert_script = "
+            // ✅ Log ke Console
+            console.group('🚗 PEMINJAMAN KENDARAAN BERHASIL');
+            console.log('%c✅ Booking ID: #$id_pinjam_insert', 'color: #10b981; font-weight: bold; font-size: 16px');
+            console.log('🚗 Kendaraan:', ".json_encode($nama_kendaraan).");
+            console.log('👤 Peminjam:', ".json_encode($nama_peminjam).");
+            console.log('🏢 Bagian:', ".json_encode($bagian).");
+            console.log('📅 Tanggal:', ".json_encode($tgl_indo).");
+            console.log('⏰ Waktu:', ".json_encode($waktu_info).");
+            console.log('🔔 FCM Terkirim:', $fcm_success_count, 'admin');
+            console.log('❌ FCM Gagal:', $fcm_failed_count);
+            console.groupEnd();
+            
+            // SweetAlert
             Swal.fire({
               icon: 'success',
-              title: 'Berhasil!',
+              title: '🎉 Berhasil!',
               html: '{$html_success}',
-              confirmButtonColor: '#28a745',
-              confirmButtonText: 'Lihat Daftar Peminjaman',
-              width: '700px'
+              confirmButtonColor: '#10b981',
+              confirmButtonText: '✅ Lihat Daftar Peminjaman',
+              showCancelButton: true,
+              cancelButtonText: '📝 Buat Peminjaman Baru',
+              cancelButtonColor: '#3b82f6',
+              width: '650px',
+              allowOutsideClick: false
             }).then((result) => {
               if (result.isConfirmed) {
                 window.location.href = '?view=datapinjamkendaraan';
+              } else if (result.dismiss === Swal.DismissReason.cancel) {
+                window.location.href = '?view=createpinjamkendaraan';
               }
             });
           ";

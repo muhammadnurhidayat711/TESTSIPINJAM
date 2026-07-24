@@ -1,7 +1,17 @@
 <?php
 session_start();
-$_SESSION = array();  // Clear session variables
-session_destroy();     // Destroy the session
-header("location:index.php");  // Redirect to index.php
-exit();  // It's a good practice to call exit after header redirection
+include 'koneksi.php';
+
+// Hapus FCM token milik user yang logout
+if (isset($_SESSION['id'])) {
+    $stmt = $conn->prepare("DELETE FROM fcm_tokens WHERE user_id = ?");
+    $stmt->bind_param("i", $_SESSION['id']);
+    $stmt->execute();
+    $stmt->close();
+}
+
+$_SESSION = array();
+session_destroy();
+header("location:index.php");
+exit();
 ?>

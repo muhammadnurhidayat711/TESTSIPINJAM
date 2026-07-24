@@ -35,6 +35,11 @@ if (session_status() === PHP_SESSION_NONE) {
 $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
 $base   = $scheme . '://' . ($_SERVER['HTTP_HOST'] ?? '');
 
+// === CSRF token auto-init ===
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
 // === Cek login ===
 if (empty($_SESSION['username']) || empty($_SESSION['level'])) {
     header("Location: {$base}/index.php?alert=not_logged_in");

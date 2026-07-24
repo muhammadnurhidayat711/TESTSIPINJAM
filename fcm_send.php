@@ -410,7 +410,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['simpan'])) {
                           $admin['id'], // User ID admin
                           "🔔 Peminjaman Baru!", // Title
                           "$nama_peminjam mengajukan peminjaman $nama_gedung pada $tgl_indo ($waktu_info)", // Body
-                          'http://localhost/testsipinjam/admin/?view=datapinjambarang', // Click action
+                          'https://sipinjam.sika.web.id/admin/?view=datapinjambarang', // Click action
                           '' // Image URL (optional)
                       );
                       

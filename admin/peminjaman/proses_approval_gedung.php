@@ -40,7 +40,7 @@ if (isset($_GET['id']) && isset($_GET['action'])) {
             // Kirim notifikasi ke user
             $notifTitle = "✅ Peminjaman Gedung Disetujui";
             $notifBody = "Peminjaman " . $data['namabarang'] . " pada tanggal " . date('d/m/Y', strtotime($data['tglpinjam'])) . " telah disetujui oleh admin.";
-            $clickAction = "http://localhost/TESTSIPINJAM/user/?view=databooking";
+            $clickAction = base_url('user/?view=databooking');
             
             $notifResult = sendFCMNotification($data['user_id'], $notifTitle, $notifBody, $clickAction);
             
@@ -63,7 +63,7 @@ if (isset($_GET['id']) && isset($_GET['action'])) {
             // Kirim notifikasi ke user
             $notifTitle = "❌ Peminjaman Gedung Ditolak";
             $notifBody = "Maaf, peminjaman " . $data['namabarang'] . " pada tanggal " . date('d/m/Y', strtotime($data['tglpinjam'])) . " ditolak oleh admin.";
-            $clickAction = "http://localhost/TESTSIPINJAM/user/?view=databooking";
+            $clickAction = base_url('user/?view=databooking');
             
             $notifResult = sendFCMNotification($data['user_id'], $notifTitle, $notifBody, $clickAction);
             

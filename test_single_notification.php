@@ -3,9 +3,6 @@
  * Test Single FCM Notification with Full Debug
  */
 
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
-
 require_once 'fcm_helper.php';
 
 ?>
